@@ -10,6 +10,8 @@
 #include <map>
 #include <iterator>
 #include <random>
+#include <cstring>
+#include <algorithm> 
 namespace fs = std::filesystem;
 // Third Party
 #include <SDL2/SDL.h> // For Mac, use <SDL.h>
@@ -18,12 +20,13 @@ namespace fs = std::filesystem;
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 960
-#define CARD_WIDTH 250/1.5
-#define CARD_HEIGHT 363/1.5
+#define CARD_WIDTH 250/1.2
+#define CARD_HEIGHT 363/1.2
 #define BUTTON_WIDTH 350
 #define BUTTON_HEIGHT 100
 #define BUTTON_ONE_POS_X WINDOW_WIDTH - BUTTON_WIDTH;
 #define BUTTON_ONE_POS_Y WINDOW_HEIGHT - BUTTON_HEIGHT;
+#define MAX_STRING_LEN 4
 std::map<std::string, std::string> allCards { 
     {"2c", "2_of_clubs"}, {"2d", "2_of_diamonds"}, {"2h", "2_of_hearts"},{"2s", "2_of_spades"},
     {"3c", "3_of_clubs"}, {"3d", "3_of_diamonds"}, {"3h", "3_of_hearts"},{"3s", "3_of_spades"},
@@ -39,6 +42,41 @@ std::map<std::string, std::string> allCards {
     {"kc", "king_of_clubs"}, {"kd", "king_of_diamonds"}, {"kh", "king_of_hearts"},{"ks", "king_of_spades"},
     {"ac", "ace_of_clubs"}, {"ad", "ace_of_diamonds"}, {"ah", "ace_of_hearts"},{"as", "ace_of_spades"}
     };
+
+const std::map<std::string, std::map<std::string, std::string> > pairSplitting{
+        {"A,A", {{"2", "Y"},{"3", "Y"},{"4","Y"}, {"5","Y"},{"6","Y"}, {"7","Y"}, {"8","Y"}, {"9","Y"}, {"10","Y"},{"A","Y"}}},
+        {"T,T", {{"2","N"}, {"3","N"}, {"4","N"}, {"5","N"}, {"6","N"}, {"7","N"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
+        {"9,9", {{"2","Y"}, {"3","Y"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","N"}, {"8","Y"}, {"9","Y"}, {"10","N"}, {"A","N"}}},
+        {"8,8", {{"2","Y"}, {"3","Y"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","Y"}, {"8","Y"}, {"9","Y"}, {"10","Y"}, {"A","Y"}}},
+        {"7,7", {{"2","Y"}, {"3","Y"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","Y"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
+        {"6,6", {{"2","Y/N"}, {"3","Y"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","N"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
+        {"5,5", {{"2","N"}, {"3","N"}, {"4","N"}, {"5","N"}, {"6","N"}, {"7","N"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"} }}, 
+        {"4,4", {{"2","N"}, {"3","N"}, {"4","N"}, {"5","Y/N"}, {"6","Y/N"}, {"7","N"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
+        {"3,3", {{"2","Y/N"}, {"3","Y/N"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","Y"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
+        {"2,2", {{"2","Y/N"}, {"3","Y/N"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","Y"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}}
+};
+const std::map<std::string, std::map<std::string, std::string>> softTotals{
+        {"A,9", {{"2","S"}, { "3","S"}, { "4","S"}, { "5","S"}, { "6","S"}, { "7","S"}, { "8","S"}, { "9","S"}, { "10","S"}, { "A","S" }}},
+        {"A,8", {{"2","S"}, { "3","S"}, { "4","S"}, { "5","S"}, { "6","Ds"}, { "7","S"}, { "8","S"}, { "9","S"}, { "10","S"}, { "A","S" }}},
+        {"A,7", {{"2","Ds"}, { "3","Ds"}, { "4","Ds"}, { "5","Ds"}, { "6","Ds"}, { "7","S"}, { "8","S"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"A,6", {{"2","H"}, { "3","D"}, { "4","D"}, { "5","D"}, { "6","D"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"A,5", {{"2","H"}, { "3","H"}, { "4","D"}, { "5","D"}, { "6","D"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"A,4", {{"2","H"}, { "3","H"}, { "4","D"}, { "5","D"}, { "6","D"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"A,3", {{"2","H"}, { "3","H"}, { "4","H"}, { "5","D"}, { "6","D"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"A,2", {{"2","H"}, { "3","H"}, { "4","H"}, { "5","D"}, { "6","D"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}} 
+};
+const std::map<std::string, std::map<std::string, std::string>> hardTotals{
+        {"17", {{"2","S"}, { "3","S"}, { "4","S"}, { "5","S"}, { "6","S"}, { "7","S"}, { "8","S"}, { "9","S"}, { "10","S"}, { "A","S" }}},
+        {"16", {{"2","S"}, { "3","S"}, { "4","S"}, { "5","S"}, { "6","S"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"15", {{"2","S"}, { "3","S"}, { "4","S"}, { "5","S"}, { "6","S"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"14", {{"2","S"}, { "3","S"}, { "4","S"}, { "5","S"}, { "6","S"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"13", {{"2","S"}, { "3","S"}, { "4","S"}, { "5","S"}, { "6","S"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"12", {{"2","H"}, { "3","H"}, { "4","S"}, { "5","S"}, { "6","S"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"11", {{"2","D"}, { "3","D"}, { "4","D"}, { "5","D"}, { "6","D"}, { "7","D"}, { "8","D"}, { "9","D"}, { "10","D"}, { "A","D" }}},
+        {"10", {{"2","D"}, { "3","D"}, { "4","D"}, { "5","D"}, { "6","D"}, { "7","D"}, { "8","D"}, { "9","D"}, { "10","H"}, { "A","H" }}},
+        {"9", {{"2","H"}, { "3","D"}, { "4","D"}, { "5","D"}, { "6","D"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}},
+        {"8", {{"2","H"}, { "3","H"}, { "4","H"}, { "5","H"}, { "6","H"}, { "7","H"}, { "8","H"}, { "9","H"}, { "10","H"}, { "A","H" }}} 
+};
 
 
 SDL_Rect createRect(int x, int y, int w, int h){
@@ -59,6 +97,32 @@ void addMessageTexture(std::vector<std::pair<SDL_Rect, SDL_Texture*>> &Messages,
     SDL_Rect Message_rect = createRect(x,y,w,h);
     Messages.push_back ( std::make_pair(Message_rect,Message) );
 
+}
+
+void render_text(
+    SDL_Renderer *renderer,
+    int x,
+    int y,
+    const char *text,
+    TTF_Font *font,
+    SDL_Rect *rect,
+    SDL_Color *color
+) {
+    SDL_Surface *surface;
+    SDL_Texture *texture;
+
+    surface = TTF_RenderText_Solid(font, text, *color);
+    texture = SDL_CreateTextureFromSurface(renderer, surface);
+    rect->x = x;
+    rect->y = y;
+    rect->w = 50;
+    rect->h = 50;
+    /* This is wasteful for textures that stay the same.
+     * But makes things less stateful and easier to use.
+     * Not going to code an atlas solution here... are we? */
+    SDL_FreeSurface(surface);
+    SDL_RenderCopy(renderer, texture, NULL, rect);
+    SDL_DestroyTexture(texture);
 }
 
 
@@ -92,10 +156,11 @@ int main(int argc, char* argv[]){
     dealerCards.push_back(dealerCard);
 
     std::vector<std::shared_ptr<TexturedRectangle>> playerCards;
-    std::shared_ptr<TexturedRectangle> playerCard = std::make_shared<TexturedRectangle>(renderer,"./images/bmp-cards/2_of_clubs.bmp");
+    
+    /*std::shared_ptr<TexturedRectangle> playerCard = std::make_shared<TexturedRectangle>(renderer,"./images/bmp-cards/2_of_clubs.bmp");
     playerCards.push_back(playerCard);
     playerCard = std::make_shared<TexturedRectangle>(renderer,"./images/bmp-cards/2_of_clubs.bmp");
-    playerCards.push_back(playerCard);
+    playerCards.push_back(playerCard);*/
 
     /*std::string path = "./images/bmp-cards";
     std::string s;
@@ -111,7 +176,7 @@ int main(int argc, char* argv[]){
     for (auto& [key, value]: allCards) {
         cardTexture = std::make_shared<TexturedRectangle>(renderer,"./images/bmp-cards/" + value + ".bmp");
         cardTextures.insert ( std::pair<std::string,std::shared_ptr<TexturedRectangle>>(key,cardTexture) );
-        std::cout << key << " has value " << value << std::endl;
+        //std::cout << key << " has value " << value << std::endl;
 }
 
 
@@ -158,6 +223,10 @@ int main(int argc, char* argv[]){
     addMessageTexture(Messages, "SPLIT IF DAS IS OFFERED", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - BUTTON_WIDTH/2, WINDOW_HEIGHT - BUTTON_HEIGHT*2 + BUTTON_HEIGHT/2 - 25,BUTTON_WIDTH,50);
     addMessageTexture(Messages, "DON'T SPLIT", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 70, WINDOW_HEIGHT - BUTTON_HEIGHT*3 + BUTTON_HEIGHT/2 - 25, 150, 50);
 
+
+    std::vector<std::pair<SDL_Rect, SDL_Texture*>> Counters;
+    addMessageTexture(Counters, "Correct: ", renderer, 100, 100, 150, 50);
+    addMessageTexture(Counters, "Incorrect: ", renderer, 100, 150, 150, 50);
    /* SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(Sans, "STAND", White); 
     SDL_Texture* Message2 = SDL_CreateTextureFromSurface(renderer, surfaceMessage2);
     SDL_Rect Message_rect2 = createRect(WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 60, WINDOW_HEIGHT - BUTTON_HEIGHT*2 + BUTTON_HEIGHT/2 - 40,120,80);
@@ -225,6 +294,73 @@ int main(int argc, char* argv[]){
     bool useSoftTable = false;
     bool useHardTable = false;
     // Main application loop
+    bool buttonClick1 = false;
+    bool buttonClick2 = false;
+    bool buttonClick3 = false;
+    bool buttonClick4 = false;
+
+    std::string playerCardsOnTable;
+    std::string dealerCardsOnTable;
+
+    std::string userAnswer;
+    TTF_Init();
+    SDL_Color color = {255, 255, 255};
+    SDL_Rect counterRect;
+    SDL_Rect incounterRect;
+
+    TTF_Font* font = TTF_OpenFont("Sans.ttf", 100);
+    unsigned int correctCounter = 0; 
+    char correctCountText[MAX_STRING_LEN];
+    snprintf(correctCountText, MAX_STRING_LEN, "%u", (unsigned int)correctCounter);
+
+    unsigned int incorrectCounter = 0; 
+    char incorrectCountText[MAX_STRING_LEN];
+    snprintf(incorrectCountText, MAX_STRING_LEN, "%u", (unsigned int)incorrectCounter);
+
+    srand (time(NULL));
+    for( int i = 0; i<2; i++){
+        item = cardTextures.begin();
+        std::advance( item, rand() % cardTextures.size());
+        item->second->SetRectangleProperties(WINDOW_WIDTH/2 - CARD_WIDTH/2 + i*50, WINDOW_HEIGHT - CARD_HEIGHT,CARD_WIDTH,CARD_HEIGHT);
+        playerCards.push_back(item->second);
+        erasedCards.push_back(std::make_pair(item->first, item->second));
+        cardTextures.erase(item->first);
+        std::cout << "item->first: " << item->first << "\n";
+        cardsOnTable.push_back(item->first);
+    }
+
+    item = cardTextures.begin();
+    std::advance( item, rand() % cardTextures.size());
+    item->second->SetRectangleProperties(WINDOW_WIDTH/2 - CARD_WIDTH/2 ,30,CARD_WIDTH,CARD_HEIGHT);
+    dealerCards[0] = item->second;
+    cardsOnTable.push_back(item->first);
+    for(auto& erasedCard: erasedCards){
+        cardTextures.insert(erasedCard);
+    }
+
+    //convert card strings to values
+    for(auto& cardOnTable: cardsOnTable){
+        cardOnTable.resize(1);
+        if(cardOnTable == "k" || cardOnTable == "q" || cardOnTable == "j" || cardOnTable == "1"){
+            cardValues.push_back(10);
+        }else if(cardOnTable == "a"){
+            cardValues.push_back(0);
+        }else{
+            cardValues.push_back(stoi(cardOnTable));
+        }
+    }
+
+    //choosing which tables to use
+    if(cardsOnTable[0] == cardsOnTable[1]){
+        useSplitTable = true;
+        std::cout << "split table\n";
+    }else if(cardValues[0] == 0 || cardValues[1] == 0){
+        useSoftTable = true;
+        std::cout << "soft table\n";
+    }else{
+        useHardTable = true;
+        std::cout << "hard table\n";
+    }
     while(gameIsRunning){
         SDL_Event event;
 
@@ -240,6 +376,7 @@ int main(int argc, char* argv[]){
                 //std::cout << "mouse moved x: " << event.button.x;
 
                 //choice boxes
+
                 if( (event.button.x > rectangle.x) && (event.button.x < (rectangle.x + rectangle.w)) &&
                     (event.button.y > rectangle.y) && (event.button.y < (rectangle.y + rectangle.h))){
                     colorRectangle = true;
@@ -264,8 +401,131 @@ int main(int argc, char* argv[]){
                 }else{
                     colorRectangle4 = false;
                 }
+
             }
             if(event.type == SDL_MOUSEBUTTONDOWN){
+                correctCounter++;
+                snprintf(correctCountText, MAX_STRING_LEN, "%u", (unsigned int)correctCounter);
+
+                incorrectCounter++;
+                incorrectCounter++;
+                snprintf(incorrectCountText, MAX_STRING_LEN, "%u", (unsigned int)incorrectCounter);
+
+                if( (event.button.x > rectangle.x) && (event.button.x < (rectangle.x + rectangle.w)) &&
+                    (event.button.y > rectangle.y) && (event.button.y < (rectangle.y + rectangle.h))){
+                    buttonClick1 = true;
+                    if(useSplitTable){
+                        userAnswer = "Y";
+                    }else{
+                        userAnswer = "H";
+                    }
+
+                    std::cout << "button 1 clicked \n";
+                }else{
+                    buttonClick1 = false;
+                }
+                if( (event.button.x > rectangle2.x) && (event.button.x < (rectangle2.x + rectangle2.w)) &&
+                    (event.button.y > rectangle2.y) && (event.button.y < (rectangle2.y + rectangle2.h))){
+                    buttonClick2 = true;
+                     if(useSplitTable){
+                        userAnswer = "Y/N";
+                    }else{
+                        userAnswer = "S";
+                    }
+                    std::cout << "button 2 clicked \n";
+
+                }else{
+                    buttonClick2 = false;
+                }
+                if( (event.button.x > rectangle3.x) && (event.button.x < (rectangle3.x + rectangle3.w)) &&
+                    (event.button.y > rectangle3.y) && (event.button.y < (rectangle3.y + rectangle3.h))){
+                    buttonClick3 = true;
+                    if(useSplitTable){
+                        userAnswer = "N";
+                    }else{
+                        userAnswer = "D";
+                    }
+                    std::cout << "button 3 clicked \n";
+                }else{
+                    buttonClick3 = false;
+                }
+                if( (event.button.x > rectangle4.x) && (event.button.x < (rectangle4.x + rectangle4.w)) &&
+                    (event.button.y > rectangle4.y) && (event.button.y < (rectangle4.y + rectangle4.h) && useSoftTable)){
+                    buttonClick4 = true;
+                    userAnswer = "Ds";
+                    std::cout << "button 4 clicked \n";
+                }else{
+                    buttonClick4 = false;
+                }
+                std::cout << "userAnswer = " << userAnswer << "\n";
+                {
+                    for(auto& cardOnTable: cardsOnTable){
+                        cardOnTable.resize(1);
+                        for(auto& x: cardOnTable){
+                            x = toupper(x);
+                        }
+                    }
+                    for(auto& cardOnTable: cardsOnTable){
+                        std::size_t found = cardOnTable.find("1");
+                        if(found != std::string::npos){
+                            cardOnTable.insert(found+1,"0");
+                            //std::cout << "1-0 found";
+                        }
+                        std::cout << cardOnTable << std::endl;
+                    }
+                    /*
+                    */
+                    playerCardsOnTable.clear();
+                    if(useHardTable == false){
+                        if(cardsOnTable[1] == "A"){
+                            std::string tempstring = cardsOnTable[1];
+                            cardsOnTable[1] = cardsOnTable[0];
+                            cardsOnTable[0] = tempstring;
+                        }
+                        playerCardsOnTable.append(cardsOnTable[0]);
+                        playerCardsOnTable.append(",");
+                        playerCardsOnTable.append(cardsOnTable[1]);
+                    }else{
+                        int sum_of_elems = 0;
+                        int i = 0;
+                        for (auto& n : cardValues)
+                            sum_of_elems += n;
+                            i++;
+                            if(i > 1)break;
+                        std::cout << "sum_of_elems: " << sum_of_elems << std::endl;
+                        playerCardsOnTable = std::to_string(sum_of_elems); 
+                    }
+                    dealerCardsOnTable = cardsOnTable[2];
+                    //std::cout << playerCardsOnTable << " = pcard on table" << std::endl;
+                    /*int i = 0;
+                    for(auto& cardOnTable: cardsOnTable){
+                        cardOnTable.resize(1);
+                        if(i == 0){
+                            playerCardsOnTable = (const char*)&toupper(cardOnTable[0]);
+                        }else if(i == 1){
+                            playerCardsOnTable.append(",");
+                            playerCardsOnTable.append((const char*)&toupper(cardOnTable[0]));
+                        }
+                        else{
+                            //dealerCardsOnTable = toupper(cardOnTable.c_str());
+                        }
+                        i++;
+                    }*/
+                }
+                std::cout << "playerCardsOnTable = " <<  playerCardsOnTable << "\n";
+                std::cout << "dealerCardsOnTable = " <<  dealerCardsOnTable << "\n";
+                std::cout << "userAnswer = " <<  userAnswer << "\n";
+                if(useSoftTable){
+                    std::cout << "soft totals correct answer: " << softTotals.at(playerCardsOnTable).at(dealerCardsOnTable) << "\n";
+                }
+                if(useSplitTable){
+                    std::cout << "soft totals correct answer: " << pairSplitting.at(playerCardsOnTable).at(dealerCardsOnTable) << "\n";
+
+                }
+                if(useHardTable){
+                }
+
+
                 //std::cout << "mouse has been clicked\n";
                 if(event.button.button == SDL_BUTTON_LEFT){
                     playerCards.clear();
@@ -368,6 +628,14 @@ int main(int argc, char* argv[]){
             SDL_RenderCopy(renderer, elem.second, NULL, &elem.first);
         }
 
+
+        render_text(renderer, 255, 100, correctCountText, font, &counterRect, &color);
+        render_text(renderer, 255, 150, incorrectCountText, font, &incounterRect, &color);
+
+        for(auto& elem: Counters){
+            SDL_RenderCopy(renderer, elem.second, NULL, &elem.first);
+        }
+        
         for(auto& rect: dealerCards){
             rect->Render(renderer);
         }

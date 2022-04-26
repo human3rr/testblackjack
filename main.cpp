@@ -1,6 +1,6 @@
 // On linux compile with:
 // g++ -std=c++17 main.cpp -o prog -lSDL2 -lSDL2_image -ldl
-
+//g++ -std=c++17 TexturedRectangle.cpp main.cpp -o prog -lSDL2 -lSDL2_image -ldl -lSDL2_ttf
 // C++ Standard Libraries
 #include <iostream>
 #include <string>
@@ -49,6 +49,18 @@ SDL_Rect createRect(int x, int y, int w, int h){
     Message_rect.h = h; // controls the height of the rect
     return Message_rect;
 }
+
+void addMessageTexture(std::vector<std::pair<SDL_Rect, SDL_Texture*>> &Messages, std::string stringMsg, SDL_Renderer* renderer, int x, int y, int w, int h){
+    TTF_Font* Sans = TTF_OpenFont("Sans.ttf", 100);
+    SDL_Color White = {255, 255, 255};
+
+    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, stringMsg.c_str(), White); 
+    SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+    SDL_Rect Message_rect = createRect(x,y,w,h);
+    Messages.push_back ( std::make_pair(Message_rect,Message) );
+
+}
+
 
 int main(int argc, char* argv[]){
     // Create a window data type
@@ -135,15 +147,18 @@ int main(int argc, char* argv[]){
 
     TTF_Init();
     std::vector<std::pair<SDL_Rect, SDL_Texture*>> Messages;
-    TTF_Font* Sans = TTF_OpenFont("Sans.ttf", 100);
-    SDL_Color White = {255, 255, 255};
 
-    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, "HIT", White); 
-    SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
-    SDL_Rect Message_rect = createRect(WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 40, WINDOW_HEIGHT - BUTTON_HEIGHT + BUTTON_HEIGHT/2 - 40,80,80);
-    Messages.push_back ( std::make_pair(Message_rect,Message) );
+    addMessageTexture(Messages, "HIT", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 40, WINDOW_HEIGHT - BUTTON_HEIGHT + BUTTON_HEIGHT/2 - 40,80,80);
+    addMessageTexture(Messages, "STAND", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 60, WINDOW_HEIGHT - BUTTON_HEIGHT*2 + BUTTON_HEIGHT/2 - 40,120,80);
+    addMessageTexture(Messages, "DOUBLE IF ALLOWED, OR HIT", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - BUTTON_WIDTH/2, WINDOW_HEIGHT - BUTTON_HEIGHT*3 + BUTTON_HEIGHT/2 - 25, BUTTON_WIDTH, 50);
+    addMessageTexture(Messages, "DOUBLE IF ALLOWED, OR STAND", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - BUTTON_WIDTH/2, WINDOW_HEIGHT - BUTTON_HEIGHT*4 + BUTTON_HEIGHT/2 - 25, BUTTON_WIDTH, 50);
 
-    SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(Sans, "STAND", White); 
+
+    addMessageTexture(Messages, "SPLIT PAIR", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 90, WINDOW_HEIGHT - BUTTON_HEIGHT + BUTTON_HEIGHT/2 - 40,180,80);
+    addMessageTexture(Messages, "SPLIT IF DAS IS OFFERED", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - BUTTON_WIDTH/2, WINDOW_HEIGHT - BUTTON_HEIGHT*2 + BUTTON_HEIGHT/2 - 25,BUTTON_WIDTH,50);
+    addMessageTexture(Messages, "DON'T SPLIT", renderer, WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 70, WINDOW_HEIGHT - BUTTON_HEIGHT*3 + BUTTON_HEIGHT/2 - 25, 150, 50);
+
+   /* SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(Sans, "STAND", White); 
     SDL_Texture* Message2 = SDL_CreateTextureFromSurface(renderer, surfaceMessage2);
     SDL_Rect Message_rect2 = createRect(WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - 60, WINDOW_HEIGHT - BUTTON_HEIGHT*2 + BUTTON_HEIGHT/2 - 40,120,80);
     Messages.push_back ( std::make_pair(Message_rect2,Message2) );
@@ -151,7 +166,7 @@ int main(int argc, char* argv[]){
     SDL_Surface* surfaceMessage3 = TTF_RenderText_Solid(Sans, "DOUBLE IF ALLOWED, OR HIT", White); 
     SDL_Texture* Message3 = SDL_CreateTextureFromSurface(renderer, surfaceMessage3);
     SDL_Rect Message_rect3 = createRect(WINDOW_WIDTH - BUTTON_WIDTH + BUTTON_WIDTH/2 - BUTTON_WIDTH/2, WINDOW_HEIGHT - BUTTON_HEIGHT*3 + BUTTON_HEIGHT/2 - 25, BUTTON_WIDTH, 50);
-    Messages.push_back ( std::make_pair(Message_rect3,Message3) );
+    Messages.push_back ( std::make_pair(Message_rect3,Message3) );*/
 
     /*SDL_Surface* surfaceMessage4 = TTF_RenderText_Solid(Sans, "DOUBLE IF ALLOWED, OR STAND", White); 
     SDL_Texture* Message4 = SDL_CreateTextureFromSurface(renderer, surfaceMessage4);
@@ -343,7 +358,13 @@ int main(int argc, char* argv[]){
             SDL_RenderDrawRect(renderer,&rectangle4);
         }
         
+        int i = 0;
         for(auto& elem: Messages){
+            i++;
+            if(useSplitTable && i < 5)continue;
+            if(useHardTable && i > 3)break;
+            if(useSoftTable && i > 4)break;
+
             SDL_RenderCopy(renderer, elem.second, NULL, &elem.first);
         }
 

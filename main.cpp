@@ -20,8 +20,8 @@ namespace fs = std::filesystem;
 
 #define WINDOW_WIDTH 1280
 #define WINDOW_HEIGHT 960
-#define CARD_WIDTH 250/1.2
-#define CARD_HEIGHT 363/1.2
+#define CARD_WIDTH 250/1
+#define CARD_HEIGHT 363/1
 #define BUTTON_WIDTH 350
 #define BUTTON_HEIGHT 100
 #define BUTTON_ONE_POS_X WINDOW_WIDTH - BUTTON_WIDTH;
@@ -45,7 +45,7 @@ std::map<std::string, std::string> allCards {
 
 const std::map<std::string, std::map<std::string, std::string> > pairSplitting{
         {"A,A", {{"2", "Y"},{"3", "Y"},{"4","Y"}, {"5","Y"},{"6","Y"}, {"7","Y"}, {"8","Y"}, {"9","Y"}, {"10","Y"},{"A","Y"}}},
-        {"T,T", {{"2","N"}, {"3","N"}, {"4","N"}, {"5","N"}, {"6","N"}, {"7","N"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
+        {"10,10", {{"2","N"}, {"3","N"}, {"4","N"}, {"5","N"}, {"6","N"}, {"7","N"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
         {"9,9", {{"2","Y"}, {"3","Y"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","N"}, {"8","Y"}, {"9","Y"}, {"10","N"}, {"A","N"}}},
         {"8,8", {{"2","Y"}, {"3","Y"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","Y"}, {"8","Y"}, {"9","Y"}, {"10","Y"}, {"A","Y"}}},
         {"7,7", {{"2","Y"}, {"3","Y"}, {"4","Y"}, {"5","Y"}, {"6","Y"}, {"7","Y"}, {"8","N"}, {"9","N"}, {"10","N"}, {"A","N"}}},
@@ -299,10 +299,14 @@ int main(int argc, char* argv[]){
     bool buttonClick3 = false;
     bool buttonClick4 = false;
 
+    int sum_of_elems = 0;
+    bool blackjack = false;
     std::string playerCardsOnTable;
     std::string dealerCardsOnTable;
 
     std::string userAnswer;
+    std::string correctAnswer;
+
     TTF_Init();
     SDL_Color color = {255, 255, 255};
     SDL_Rect counterRect;
@@ -404,13 +408,7 @@ int main(int argc, char* argv[]){
 
             }
             if(event.type == SDL_MOUSEBUTTONDOWN){
-                correctCounter++;
-                snprintf(correctCountText, MAX_STRING_LEN, "%u", (unsigned int)correctCounter);
-
-                incorrectCounter++;
-                incorrectCounter++;
-                snprintf(incorrectCountText, MAX_STRING_LEN, "%u", (unsigned int)incorrectCounter);
-
+                
                 if( (event.button.x > rectangle.x) && (event.button.x < (rectangle.x + rectangle.w)) &&
                     (event.button.y > rectangle.y) && (event.button.y < (rectangle.y + rectangle.h))){
                     buttonClick1 = true;
@@ -457,6 +455,7 @@ int main(int argc, char* argv[]){
                 }else{
                     buttonClick4 = false;
                 }
+                if(buttonClick1 || buttonClick2 || buttonClick3 || buttonClick4){
                 std::cout << "userAnswer = " << userAnswer << "\n";
                 {
                     for(auto& cardOnTable: cardsOnTable){
@@ -465,6 +464,7 @@ int main(int argc, char* argv[]){
                             x = toupper(x);
                         }
                     }
+                    //convert 1 to 10
                     for(auto& cardOnTable: cardsOnTable){
                         std::size_t found = cardOnTable.find("1");
                         if(found != std::string::npos){
@@ -473,10 +473,28 @@ int main(int argc, char* argv[]){
                         }
                         std::cout << cardOnTable << std::endl;
                     }
+                    //convert j,q,k to 10
+                    for(auto& cardOnTable: cardsOnTable){
+                        if (std::string::npos != cardOnTable.find("J")){
+                            cardOnTable.replace(cardOnTable.begin(),cardOnTable.end(),"10");
+                        }
+                        if (std::string::npos != cardOnTable.find("Q")){
+                            cardOnTable.replace(cardOnTable.begin(),cardOnTable.end(),"10");
+                        }
+                        if (std::string::npos != cardOnTable.find("K")){
+                            cardOnTable.replace(cardOnTable.begin(),cardOnTable.end(),"10");
+                        }
+                    }
                     /*
                     */
                     playerCardsOnTable.clear();
                     if(useHardTable == false){
+                        if(useSoftTable){
+                            if ( cardsOnTable[0] == "10" || cardsOnTable[1] == "10")
+                            {
+                                blackjack = true;
+                            }
+                        }
                         if(cardsOnTable[1] == "A"){
                             std::string tempstring = cardsOnTable[1];
                             cardsOnTable[1] = cardsOnTable[0];
@@ -486,12 +504,13 @@ int main(int argc, char* argv[]){
                         playerCardsOnTable.append(",");
                         playerCardsOnTable.append(cardsOnTable[1]);
                     }else{
-                        int sum_of_elems = 0;
+                        sum_of_elems = 0;
                         int i = 0;
-                        for (auto& n : cardValues)
+                        for (auto& n : cardValues){
                             sum_of_elems += n;
                             i++;
                             if(i > 1)break;
+                        }
                         std::cout << "sum_of_elems: " << sum_of_elems << std::endl;
                         playerCardsOnTable = std::to_string(sum_of_elems); 
                     }
@@ -516,18 +535,40 @@ int main(int argc, char* argv[]){
                 std::cout << "dealerCardsOnTable = " <<  dealerCardsOnTable << "\n";
                 std::cout << "userAnswer = " <<  userAnswer << "\n";
                 if(useSoftTable){
-                    std::cout << "soft totals correct answer: " << softTotals.at(playerCardsOnTable).at(dealerCardsOnTable) << "\n";
+                    if(!blackjack){
+                        correctAnswer = softTotals.at(playerCardsOnTable).at(dealerCardsOnTable);
+                        std::cout << "soft totals correct answer: " << correctAnswer << "\n";
+                    }
                 }
                 if(useSplitTable){
-                    std::cout << "soft totals correct answer: " << pairSplitting.at(playerCardsOnTable).at(dealerCardsOnTable) << "\n";
+                    correctAnswer = pairSplitting.at(playerCardsOnTable).at(dealerCardsOnTable);
+                    std::cout << "soft totals correct answer: " << correctAnswer << "\n";
 
                 }
                 if(useHardTable){
+                    std::cout << "sum_of_elems = " << sum_of_elems << std::endl;
+                    if(sum_of_elems > 7 && sum_of_elems < 18){
+                        correctAnswer = hardTotals.at(std::to_string(sum_of_elems)).at(dealerCardsOnTable);
+                        std::cout << "hard totals correct answer: " << correctAnswer<< "\n";
+                    }else if(sum_of_elems < 8){
+                        correctAnswer = hardTotals.at("8").at(dealerCardsOnTable);
+                        std::cout << "hard totals correct answer: " << correctAnswer << "\n";
+                    }else{
+                        correctAnswer = hardTotals.at("17").at(dealerCardsOnTable);
+                        std::cout << "hard totals correct answer: " << correctAnswer << "\n";
+                    }
                 }
 
+                if(userAnswer == correctAnswer){
+                    correctCounter++;
+                    snprintf(correctCountText, MAX_STRING_LEN, "%u", (unsigned int)correctCounter);
+                }else{
+                    incorrectCounter++;
+                    snprintf(incorrectCountText, MAX_STRING_LEN, "%u", (unsigned int)incorrectCounter);
+                }
 
-                //std::cout << "mouse has been clicked\n";
-                if(event.button.button == SDL_BUTTON_LEFT){
+                    blackjack:
+                    std::cout << "entry" << std::endl;
                     playerCards.clear();
                     cardsOnTable.clear();
                     cardValues.clear();
@@ -554,9 +595,9 @@ int main(int argc, char* argv[]){
                     for(auto& erasedCard: erasedCards){
                         cardTextures.insert(erasedCard);
                     }
-                    for(auto& cardOnTable: cardsOnTable){
+                    /*for(auto& cardOnTable: cardsOnTable){
                         std::cout << "Cards on table: " << cardOnTable << std::endl;
-                    }
+                    }*/
 
 
                     //convert card strings to values
@@ -571,6 +612,13 @@ int main(int argc, char* argv[]){
                         }
                     }
 
+                    if((cardValues[0] == 10 && cardValues[1] == 0) || (cardValues[1] == 10 && cardValues[0] == 0) ){
+                        std::cout << "BLACKJACK" << std::endl;
+                        goto blackjack;
+                    }
+
+                    std::cout << "WTF" << std::endl;
+                    std::cout << cardValues[0] << " " <<cardValues[1] << std::endl ;
                     //choosing which tables to use
                     if(cardsOnTable[0] == cardsOnTable[1]){
                         useSplitTable = true;
@@ -583,8 +631,13 @@ int main(int argc, char* argv[]){
                         std::cout << "hard table\n";
                     }
                     std::cout << "first card val: " << cardValues[0] << " second card val: " << cardValues[1] << std::endl;
-                    std::cout << "mouse left been clicked\n";
-            }
+                    //std::cout << "mouse left been clicked\n";
+                }
+
+                //std::cout << "mouse has been clicked\n";
+                if(event.button.button == SDL_BUTTON_LEFT){
+
+                }
             }
         }
         // (2) Handle Updates
